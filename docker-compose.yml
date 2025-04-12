@@ -1,0 +1,26 @@
+services:
+    messenger-app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - "8000:8000"
+        volumes:
+            -   ./messenger:/messenger
+        environment:
+            DB_HOST: database
+            DB_NAME: db_social_drf
+            DB_USER: postgres
+            DB_PASSWORD: 30062001
+
+        command:
+            sh -c "python manage.py runserver 0.0.0.0:8000"
+        depends_on:
+            - database
+
+    database:
+        image: postgres:17.4-alpine
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: 30062001
+            POSTGRES_DB: db_social_drf

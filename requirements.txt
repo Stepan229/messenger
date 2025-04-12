@@ -3,4 +3,6 @@ djangorestframework
 drf-spectacular
 drf-spectacular-sidecar
 gunicorn
-psycopg2
+psycopg2-binary==2.9.5
+django-cors-headers
+channels
