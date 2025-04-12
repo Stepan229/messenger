@@ -10,9 +10,12 @@ from rest_framework.decorators import action
 from django.shortcuts import render
 from rest_framework.response import Response
 from .utils import *
+from users.serializers import UserSerializer
+
+from django.db import connection
 
 class MessagesViewSet(viewsets.GenericViewSet):
-    permission_classes = [AllowAny, ]
+    permission_classes = [IsAuthenticated, ]
     authentication_classes = (TokenAuthentication,)
     serializer_class = serializers.MessagesSerializer
     pagination_class = PageNumberPagination
@@ -71,7 +74,9 @@ class ChatsViewSet(viewsets.GenericViewSet):
     serializer_class = serializers.EmptySerializer
     serializer_classes = {
         'list': serializers.UserChatSerializer,
-        'create': serializers.ChatCreateSerializer
+        'create': serializers.ChatCreateSerializer,
+        'update': serializers.ChatSerializer,
+        'get_chat_members': UserSerializer
     }
     pagination_class = PageNumberPagination
 
@@ -79,7 +84,7 @@ class ChatsViewSet(viewsets.GenericViewSet):
         # count_chats = self.request.query_params.get('count')
         user = request.user
         chats = UserChat.objects.filter(user_id=user).select_related("chat_id")
-        serializer = self.serializer_class(chats, many=True)
+        serializer = self.get_serializer(chats, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
     @action(methods=['POST', ], detail=False)
@@ -90,7 +95,33 @@ class ChatsViewSet(viewsets.GenericViewSet):
         serializer.is_valid(raise_exception=True)
 
         serializer.save()
-        return Response(serializer.validated_data, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+    @action(methods=['PUT', ], detail=False)
+    def update(self, request, *args, **kwargs):
+        user = request.user
+        chat_id = str_to_int(self.kwargs.get('room_id'))
+        chat = validate_chat_ownership(user, chat_id)
+
+        serializer = self.get_serializer(data=request.data, instance=chat)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(methods=['GET', ], detail=False)
+    def get_chat_members(self, request, *args, **kwargs):
+        user = request.user
+        chat_id = str_to_int(self.kwargs.get('room_id'))
+        chat = verification_user_in_chat(user, chat_id)
+        user_instance = UserChat.objects.filter(chat_id=chat).values_list('user_id', flat=True)
+        print(user_instance)
+        users = User.objects.filter(pk__in=user_instance)
+        print(users)
+        for query in connection.queries:
+            print(query)
+        serializer = self.get_serializer(users, many=True)
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
 
     def get_serializer_class(self):
         if not isinstance(self.serializer_classes, dict):

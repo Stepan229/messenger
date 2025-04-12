@@ -15,7 +15,7 @@ class UserChat(models.Model):
     chat_id = models.ForeignKey(Chat, on_delete=models.CASCADE)
     user_id = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     is_read = models.BooleanField(default=False) # показывает что у тебя не прочитано сообщение
-
+    is_creator = models.BooleanField(default=False)
 
 class Message(models.Model):
     creator_id = models.ForeignKey(User, on_delete=models.CASCADE)

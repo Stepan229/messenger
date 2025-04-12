@@ -36,6 +36,10 @@ class ChatSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'time_create']
         read_only_fields = ['id', 'time_create']
 
+    def update(self, instance, validated_data):
+        instance.title = validated_data.get('title', instance.title)
+        instance.save()
+        return instance
 
 class UserChatSerializer(serializers.ModelSerializer):
     chat = ChatSerializer(source='chat_id')
@@ -56,18 +60,29 @@ class ChatCreateSerializer(serializers.Serializer):
     )
 
     def create(self, validated_data):
-
         users_id = validated_data.get('users_id')
         users_email = validated_data.get('users_email')
         title_chat = validated_data.get('title')
-        chat = Chat.objects.create(title=title_chat)
+
         users = get_and_check_users(users_id, users_email)
+        creator_chat = self.context['user']
+        chat = Chat.objects.create(title=title_chat)
 
-        UserChat.objects.bulk_create(
-            UserChat(chat_id=chat, user_id=user)
-            for user in users.values()
-        )
+        user_chat_instances = [UserChat(chat_id=chat, user_id=user)
+                               for user in users.values()]
 
+        user_chat_instances.append(UserChat(chat_id=chat,
+                                            user_id=creator_chat,
+                                            is_creator=True))
+        UserChat.objects.bulk_create(user_chat_instances)
+
+        # for query in connection.queries:
+        #     print(query)
+        return chat
+
+
+    def to_representation(self, instance):
+        chat = ChatSerializer(instance).data
         return chat
 
 

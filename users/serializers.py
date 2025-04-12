@@ -6,13 +6,14 @@ from django.contrib.auth import password_validation
 from .models import User
 
 
-class UserSerializer(serializers.Serializer):
-    model = User
-    email = serializers.CharField(max_length=254)
-    username = serializers.CharField(max_length=150)
-    last_name = serializers.CharField(max_length=150)
-    first_name = serializers.CharField(max_length=150)
-    password = serializers.CharField(max_length=128, write_only=True)
+class UserSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'username', 'last_name', 'first_name', 'password']
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
 
     def create(self, validated_data):
         user = User.objects.create_user(

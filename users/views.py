@@ -56,5 +56,5 @@ class AuthViewSet(viewsets.GenericViewSet):
             return self.serializer_classes[self.action]
         return super().get_serializer_class()
 
-# def login(request):
-#     return render(request, 'users/login.html')
+def login1(request):
+    return render(request, 'users/login.html')

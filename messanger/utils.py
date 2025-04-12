@@ -21,6 +21,14 @@ def verification_user_in_chat(user, chat_id: int) -> Chat:
     except UserChat.DoesNotExist:
         raise NotFound("Chat not found")
 
+def validate_chat_ownership(user, chat_id: int) -> Chat:
+    try:
+        _ = UserChat.objects.get(chat_id=chat_id, user_id=user.id, is_creator=True)
+        chat = Chat.objects.get(id=chat_id)
+        return chat
+    except UserChat.DoesNotExist:
+        raise NotFound("You don't have access to this chat")
+
 def slicing_messages(messages: QuerySet, end_slice: str) -> QuerySet:
     end_slice = str_to_int(end_slice)
     messages = messages[:end_slice]
