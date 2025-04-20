@@ -123,6 +123,14 @@ class ChatsViewSet(viewsets.GenericViewSet):
         serializer = self.get_serializer(users, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
+    @action(methods=['DELETE', ], detail=False)
+    def delete(self, request, *args, **kwargs):
+        user = request.user
+        chat_id = str_to_int(self.kwargs.get('room_id'))
+        chat = verification_user_in_chat(user, chat_id)
+        chat.delete()
+        return Response("Successfully removed", status=status.HTTP_202_ACCEPTED)
+
     def get_serializer_class(self):
         if not isinstance(self.serializer_classes, dict):
             raise ImproperlyConfigured("serializer_classes should be a dict mapping.")

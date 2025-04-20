@@ -23,7 +23,6 @@ urlpatterns = [
          name='message-update'),
     path("chat/<int:room_id>/messages/<int:message_id>/", MessagesViewSet.as_view({'delete': 'delete'}),
          name='message-delete'),
-
     path("chats/", ChatsViewSet.as_view({'get': 'list'}),
          name='chat-list'),
     path("chats/create/", ChatsViewSet.as_view({'post': 'create'}),
@@ -32,4 +31,6 @@ urlpatterns = [
          name='chat-update'),
     path("chats/<str:room_id>/members", ChatsViewSet.as_view({'get': 'get_chat_members'}),
          name='chat-members'),
+    path("chats/<int:room_id>/", ChatsViewSet.as_view({'delete': 'delete'}),
+         name='chat-delete'),
 ]

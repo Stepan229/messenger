@@ -141,7 +141,7 @@ DATABASES = {
         'USER': os.environ.get('DB_USER', 'postgres'),
         'PASSWORD': os.environ.get('DB_PASSWORD', '123456'),
         'HOST': os.environ.get('DB_HOST', 'localhost'),
-        # 'PORT': '5432',
+        'PORT': '5432',
     }
 }
 
@@ -193,7 +193,11 @@ ASGI_APPLICATION = 'social_network.asgi.application'
 # для asgi
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [f"redis://redis/6379/0"],
+
+        },
     },
 }
 

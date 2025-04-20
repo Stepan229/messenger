@@ -9,18 +9,26 @@ services:
             -   ./messenger:/messenger
         environment:
             DB_HOST: database
-            DB_NAME: db_social_drf
+            DB_NAME: db_social
             DB_USER: postgres
             DB_PASSWORD: 30062001
 
         command:
             sh -c "python manage.py runserver 0.0.0.0:8000"
+#            sh -c "daphne social_network.asgi:application"
         depends_on:
             - database
+            - redis
 
     database:
         image: postgres:17.4-alpine
+        ports:
+            - "5433:5432"
         environment:
             POSTGRES_USER: postgres
             POSTGRES_PASSWORD: 30062001
-            POSTGRES_DB: db_social_drf
+            POSTGRES_DB: db_social
+
+    redis:
+        image: redis:7.2.5-alpine
+        hostname: redis
