@@ -52,16 +52,20 @@ class ChatCreateSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=70)
     users_id = serializers.ListSerializer(
         child=serializers.IntegerField(),
-        allow_empty=True
+        required=False,
+        default=list
+
     )
     users_email = serializers.ListSerializer(
         child=serializers.CharField(max_length=254),
-        allow_empty=True
+        required=False,
+        default=list
+
     )
 
     def create(self, validated_data):
-        users_id = validated_data.get('users_id')
-        users_email = validated_data.get('users_email')
+        users_id = validated_data.get('users_id', [])
+        users_email = validated_data.get('users_email', [])
         title_chat = validated_data.get('title')
 
         users = get_and_check_users(users_id, users_email)
@@ -76,8 +80,6 @@ class ChatCreateSerializer(serializers.Serializer):
                                             is_creator=True))
         UserChat.objects.bulk_create(user_chat_instances)
 
-        # for query in connection.queries:
-        #     print(query)
         return chat
 
 

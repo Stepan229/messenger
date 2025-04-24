@@ -1,84 +1,96 @@
-import pytest
-from rest_framework.test import APIClient
+from django.test import TestCase
 from django.urls import reverse
-from messenger.messanger.models import Message, Chat
+from rest_framework.test import APIClient
+from rest_framework import status
+from .models import *
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-@pytest.mark.django_db
-def test_messages_list_authenticated():
-    user = User.objects.create_user(username='testuser', password='testpass')
-    chat = Chat.objects.create(title='Test Chat')
-    Message.objects.create(creator_id=user, chat_id=chat, text='Test message')
 
-    client = APIClient()
-    client.force_authenticate(user=user)
-    url = reverse('messages-list', kwargs={'room_id': chat.id})
-    response = client.get(url)
+class MessengerTests(TestCase):
+    create_chat_url = reverse('chat-create')
+    register_url = reverse('user-register')
+    login_url = reverse('user-login')
+    test_users = [
+        {
+            "email": "test1@mail.ru",
+            "password": "testpass123",
+            "first_name": "Иван",
+            "last_name": "Петров",
+            "username": "ivan_petrov"
+        },
+        {
+            "email": "test2@mail.ru",
+            "password": "testpass456",
+            "first_name": "Мария",
+            "last_name": "Сидорова",
+            "username": "maria_sid"
+        },
+        {
+            "email": "test3@mail.ru",
+            "password": "testpass789",
+            "first_name": "Алексей",
+            "last_name": "Иванов",
+            "username": "alex_ivanov"
+        },
+        {
+            "email": "test4@mail.ru",
+            "password": "securepass1",
+            "first_name": "Елена",
+            "last_name": "Смирнова",
+            "username": "elena_smir"
+        },
+        {
+            "email": "test5@mail.ru",
+            "password": "strongpass2",
+            "first_name": "Дмитрий",
+            "last_name": "Козлов",
+            "username": "dima_koz"
+        }
+    ]
 
-    assert response.status_code == 200
-    assert len(response.data) == 1
-    assert response.data[0]['text'] == 'Test message'
+    def test_create_chat(self):
+        data_users = self.register_user()
+        creator_chat = data_users[0]
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION=f'Token {creator_chat["auth_token"]}')
+        with self.subTest(user=creator_chat['username']):
+            users_in_email = ([user['email'] for user in self.test_users])
+            data = {
+                'users_email': users_in_email[1:],
+                'title': 'Chat test 1',
+            }
+            response = client.post(self.create_chat_url, data)
+            title_chat = Chat.objects.all().values()[0].get('title', '')
+            users_in_chat_query = UserChat.objects.select_related('user_id').all()
+            users_in_chat = [user.user_id.email for user in users_in_chat_query]
 
-@pytest.mark.django_db
-def test_messages_list_unauthenticated():
-    chat = Chat.objects.create(title='Test Chat')
-    url = reverse('messages-list', kwargs={'room_id': chat.id})
-    client = APIClient()
-    response = client.get(url)
+            self.assertEqual(
+                response.status_code,
+                status.HTTP_201_CREATED,
+                f"Ошибка. {creator_chat['username']}. Ответ: {response.json()}")
 
-    assert response.status_code == 401
+            self.assertEqual(
+                title_chat,
+                data['title'],
+                f"Нет чата. Ответ: {response.json()}")
 
-@pytest.mark.django_db
-def test_create_message_authenticated():
-    user = User.objects.create_user(username='testuser', password='testpass')
-    chat = Chat.objects.create(title='Test Chat')
+            self.assertListEqual(users_in_chat, users_in_email,
+                                 f"Пользователи не найдены. ожидание: {users_in_email}. факт: {users_in_chat}")
 
-    client = APIClient()
-    client.force_authenticate(user=user)
-    url = reverse('messages-create', kwargs={'room_id': chat.id})
-    data = {'text': 'New message'}
-    response = client.post(url, data, format='json')
+            
 
-    assert response.status_code == 201
-    assert response.data['text'] == 'New message'
-
-@pytest.mark.django_db
-def test_create_message_unauthenticated():
-    chat = Chat.objects.create(title='Test Chat')
-    url = reverse('messages-create', kwargs={'room_id': chat.id})
-    data = {'text': 'New message'}
-    client = APIClient()
-    response = client.post(url, data, format='json')
-
-    assert response.status_code == 401
-
-@pytest.mark.django_db
-def test_update_message_authenticated():
-    user = User.objects.create_user(username='testuser', password='testpass')
-    chat = Chat.objects.create(title='Test Chat')
-    message = Message.objects.create(creator_id=user, chat_id=chat, text='Old message')
-
-    client = APIClient()
-    client.force_authenticate(user=user)
-    url = reverse('messages-update', kwargs={'room_id': chat.id, 'message_id': message.id})
-    data = {'text': 'Updated message'}
-    response = client.put(url, data, format='json')
-
-    assert response.status_code == 200
-    assert response.data['text'] == 'Updated message'
-
-@pytest.mark.django_db
-def test_delete_message_authenticated():
-    user = User.objects.create_user(username='testuser', password='testpass')
-    chat = Chat.objects.create(title='Test Chat')
-    message = Message.objects.create(creator_id=user, chat_id=chat, text='Test message')
-
-    client = APIClient()
-    client.force_authenticate(user=user)
-    url = reverse('messages-delete', kwargs={'room_id': chat.id, 'message_id': message.id})
-    response = client.delete(url)
-
-    assert response.status_code == 202
-    assert Message.objects.filter(id=message.id).count() == 0
+    def register_user(self) -> list[dict[str, str]]:
+        users_data = []
+        for i, data_user in enumerate(self.test_users, 1):
+            with self.subTest(user=data_user['username']):
+                response = self.client.post(self.register_url, data_user)
+                data_user['auth_token'] = response.json().get('auth_token')
+                users_data.append(data_user)
+                self.assertEqual(
+                    response.status_code,
+                    status.HTTP_201_CREATED,
+                    f"Ошибка. {data_user['username']}. Ответ: {response.json()}"
+                )
+        return users_data

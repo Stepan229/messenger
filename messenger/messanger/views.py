@@ -95,8 +95,7 @@ class ChatsViewSet(viewsets.GenericViewSet):
         serializer.is_valid(raise_exception=True)
 
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @action(methods=['PUT', ], detail=False)
     def update(self, request, *args, **kwargs):

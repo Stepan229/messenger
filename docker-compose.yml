@@ -14,8 +14,9 @@ services:
             DB_PASSWORD: 30062001
 
         command:
-            sh -c "python manage.py runserver 0.0.0.0:8000"
-#            sh -c "daphne social_network.asgi:application"
+#            sh -c "python manage.py runserver 0.0.0.0:8000"
+            sh -c "python manage.py runserver"
+            sh -c "daphne social_network.asgi:application"
         depends_on:
             - database
             - redis
@@ -32,3 +33,19 @@ services:
     redis:
         image: redis:7.2.5-alpine
         hostname: redis
+
+    messenger-test:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        volumes:
+            - ./messenger:/messenger
+        environment:
+            DB_HOST: database
+            DB_NAME: db_social
+            DB_USER: postgres
+            DB_PASSWORD: 30062001
+        command: sh -c "python manage.py test"
+        depends_on:
+            - database
+            - redis

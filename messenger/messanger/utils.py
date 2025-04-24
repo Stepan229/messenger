@@ -42,6 +42,7 @@ def validate_message_ownership(user, chat: Chat, message_id: int):
         raise PermissionDenied("Message not found or no rights to edit the message")
 
 def get_and_check_users(id: list, email: list) -> dict[int: User]:
+    print(email, id)
     users = {}
     count_users = 0
     if id:
