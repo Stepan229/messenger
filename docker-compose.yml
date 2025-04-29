@@ -14,9 +14,9 @@ services:
             DB_PASSWORD: 30062001
 
         command:
-#            sh -c "python manage.py runserver 0.0.0.0:8000"
-            sh -c "python manage.py runserver"
-            sh -c "daphne social_network.asgi:application"
+            sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+#            sh -c "python manage.py runserver"
+#            sh -c "daphne social_network.asgi:application"
         depends_on:
             - database
             - redis
@@ -24,7 +24,7 @@ services:
     database:
         image: postgres:17.4-alpine
         ports:
-            - "5433:5432"
+            - "5434:5432"
         environment:
             POSTGRES_USER: postgres
             POSTGRES_PASSWORD: 30062001

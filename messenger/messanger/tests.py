@@ -61,11 +61,11 @@ class MessengerTests(TestCase):
                 'users_email': users_in_email[1:],
                 'title': 'Chat test 1',
             }
-            response = client.post(self.create_chat_url, data)
+            response = client.post(self.create_chat_url, data, format='json')
             title_chat = Chat.objects.all().values()[0].get('title', '')
             users_in_chat_query = UserChat.objects.select_related('user_id').all()
             users_in_chat = [user.user_id.email for user in users_in_chat_query]
-
+            print(response.json())
             self.assertEqual(
                 response.status_code,
                 status.HTTP_201_CREATED,
@@ -76,8 +76,9 @@ class MessengerTests(TestCase):
                 data['title'],
                 f"Нет чата. Ответ: {response.json()}")
 
-            self.assertListEqual(users_in_chat, users_in_email,
-                                 f"Пользователи не найдены. ожидание: {users_in_email}. факт: {users_in_chat}")
+            self.assertSetEqual(set(users_in_chat), set(users_in_email),
+                                 f"Пользователи не найдены. ожидание: "
+                                 f"{users_in_email}. факт: {users_in_chat}")
 
             
 

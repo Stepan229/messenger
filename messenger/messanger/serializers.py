@@ -67,7 +67,6 @@ class ChatCreateSerializer(serializers.Serializer):
         users_id = validated_data.get('users_id', [])
         users_email = validated_data.get('users_email', [])
         title_chat = validated_data.get('title')
-
         users = get_and_check_users(users_id, users_email)
         creator_chat = self.context['user']
         chat = Chat.objects.create(title=title_chat)
@@ -82,8 +81,8 @@ class ChatCreateSerializer(serializers.Serializer):
 
         return chat
 
-
     def to_representation(self, instance):
+        print(type(instance))
         chat = ChatSerializer(instance).data
         return chat
 

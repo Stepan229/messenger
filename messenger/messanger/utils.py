@@ -42,9 +42,6 @@ def validate_message_ownership(user, chat: Chat, message_id: int):
         raise PermissionDenied("Message not found or no rights to edit the message")
 
 def get_and_check_users(id: list, email: list) -> dict[int: User]:
-    print(email, id)
-    users = {}
-    count_users = 0
     if id:
         users = User.objects.in_bulk(id)
         count_users = len(id)
@@ -52,10 +49,8 @@ def get_and_check_users(id: list, email: list) -> dict[int: User]:
         users = User.objects.in_bulk(email, field_name='email')
         count_users = len(email)
     else:
-        ValidationError("users_id, users_email are empty")
-
+        raise ValidationError("users_id, users_email are empty")
     if len(users) != count_users:
         num_of_lost = count_users - len(users)
         raise NotFound(f"Users not found: {num_of_lost}")
-
     return users
