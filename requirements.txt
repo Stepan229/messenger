@@ -9,3 +9,4 @@ channels
 channels_redis
 daphne
 redis
+Twisted[tls,http2]

@@ -88,13 +88,26 @@
                 // Проверяем статус ответа
                 if (response.ok) {
                     const data = await response.json();  // Используем await для получения данных
-                    await localStorage.setItem('token', JSON.stringify(data.auth_token)) // write
-                    console.log(localStorage.getItem('token')); // read
-                    console.log('Login successful:', data);
+                    await localStorage.setItem('token', data.auth_token) // write
+                    const token = localStorage.getItem('token') // read
+                    console.log('Login successful:', token);
+                    console.log(typeof token);
+                    console.log(typeof data.auth_token);
+                    const responseRooms = await fetch(`http://127.0.0.1:8000/api/chats/`, {
+                        headers: {
+                            'Authorization': `Token ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const dataRooms = await responseRooms.json()
+                    const firstKey = Object.keys(dataRooms)[0];
+                    const firstRoom = dataRooms[firstKey]
+
+                    const chatId = firstRoom.chat.id;
                     // const tokenm = JSON.parse(localStorage.getItem('token'))
                     // console.log('Token ', tokenm);
                     // Перенаправляем на страницу с комнатой 1
-                    window.location.href = 'http://127.0.0.1:8000/api/chat/31/';
+                    window.location.href = `http://127.0.0.1:8000/api/chat/${chatId}/`;
                 } else {
                     // Обрабатываем ошибку
                     const errorData = await response.json();  // Используем await для получения данных
