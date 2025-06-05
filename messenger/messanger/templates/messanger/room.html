@@ -63,15 +63,17 @@
                 const chatLog = document.querySelector('#chat-log');
 
                 if (data.type === 'history') {
-                    // Очищаем чат перед загрузкой истории
                     chatLog.innerHTML = '';
 
-                    // Добавляем все сообщения из истории
-                    data.messages.forEach(msg => {
+                    // Сортировка по возрастанию даты (старые сверху)
+                    const sortedMessages = data.messages.sort((a, b) => {
+                        return new Date(a.created_at) - new Date(b.created_at);
+                    });
+
+                    sortedMessages.forEach(msg => {
                         displayMessage(msg);
                     });
 
-                    // Прокручиваем вниз
                     chatLog.scrollTop = chatLog.scrollHeight;
                 }
                 else if (data.type === 'message') {
@@ -94,9 +96,9 @@
                     // Обновление сообщения
                     updateMessage(data);
                 }
-                else if (data.type === 'message_delete') {
+                else if (data.type === 'delete_message') {
                     // Удаление сообщения
-                    deleteMessageFromView(data.message_id);
+                    deleteMessageFromView(data.id);  // Используем data.id вместо data.message_id
                 }
 
             } catch (error) {
@@ -120,6 +122,7 @@
                 </span>
             `;
 
+            // Добавляем новое сообщение в конец чата
             document.querySelector('#chat-log').appendChild(messageDiv);
         }
 
@@ -167,6 +170,11 @@
             }));
 
             messageInput.value = '';
+        }
+
+        function scrollToBottom() {
+            const chatLog = document.querySelector('#chat-log');
+            chatLog.scrollTop = chatLog.scrollHeight;
         }
 
         // Функция редактирования сообщения

@@ -21,7 +21,8 @@ class Message(models.Model):
     creator_id = models.ForeignKey(User, on_delete=models.CASCADE)
     chat_id = models.ForeignKey(Chat, on_delete=models.CASCADE)
     text = models.CharField(max_length=1000)
-    time_create = models.DateTimeField(auto_now=True)
+    time_create = models.DateTimeField(auto_now_add=True)
+    time_update = models.DateTimeField(auto_now=True)
     is_read = models.BooleanField(default=False) # прочитал ли кто-то твое сообщение
 
     class Meta:

@@ -14,16 +14,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
         query_params = query_string.decode()
         self.room_name = self.scope['url_route']['kwargs']['room_name']
         self.room_group_name = f'chat_{self.room_name}'
-
         self.room = await self.get_or_create_room()
-
+        self.user = self.scope['user']
 
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
         )
 
-        self.user = self.scope['user']
+
         if self.user == AnonymousUser:
             await self.close()
         await self.accept(subprotocol='Token')
@@ -35,20 +34,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def receive(self, text_data=None, bytes_data=None):
-        # text_data_json = json.loads(text_data)
-        # message = text_data_json['message']
-        # user = self.scope['user']
-        # await self.save_message(message)
-        # print(user)
-        # await self.channel_layer.group_send(
-        #     self.room_group_name,
-        #     {
-        #         'type': 'chat_message',
-        #         'message': message,
-        #         'id': message.id,
-        #         'sender': user
-        #     }
-        # )
         data = json.loads(text_data)
         message_type = data.get('type')
 
@@ -61,31 +46,31 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'type': 'chat_message',
                     'message': message.text,
                     'id': message.id,
-                    'sender': message.creator_id.username,
+                    'sender': self.user.username,
                 }
             )
 
         elif message_type == 'edit_message':
             # Обработка редактирования
-            message = await self.edit_message(data['message_id'], data['new_text'])
+            message = await self.edit_message_in_db(data['message_id'], data['new_text'])
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
-                    'type': 'chat_message',
+                    'type': 'edit_message',
                     'message': message.text,
                     'id': message.id,
-                    'sender': message.creator.username,
+                    'sender': self.user.username,
                 }
             )
 
         elif message_type == 'delete_message':
             # Обработка удаления
-            await self.delete_message(data['message_id'])
+            await self.delete_message_in_db(data['message_id'])
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
                     'type': 'delete_message',
-                    'message_id': data['message_id'],
+                    'id': data['message_id'],
                 }
             )
 
@@ -99,16 +84,29 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.send(text_data=send_data)
 
     async def chat_message(self, event):
-        print("EVENT")
-        username = self.user.username
         text = json.dumps({
             'type': 'message',
             'message': event['message'],
             'id': event['id'],
             'sender': event['sender']
         })
-        print(text)
         await self.send(text_data=text)
+
+    async def edit_message(self, event):
+        text = json.dumps({
+            'type': 'message_update',
+            'new_text': event['message'],
+            'id': event['id'],
+            'sender': event['sender']
+        })
+        await self.send(text_data=text)
+
+    async def delete_message(self, event):
+        message = json.dumps({
+            'type': 'delete_message',
+            'id': event['id'],
+        })
+        await self.send(text_data=message)
 
     @sync_to_async
     def get_or_create_room(self):
@@ -126,6 +124,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return message
 
     @database_sync_to_async
+    def edit_message_in_db(self, message_id, new_text):
+        message = Message.objects.get(chat_id=self.room_name,
+                                      id=message_id,
+                                      creator_id=self.user)
+        message.text = new_text
+        message.save()
+        return message
+    @database_sync_to_async
     def get_messages(self):
         messages = Message.objects.filter(chat_id=self.room_name)
         messages = [
@@ -138,8 +144,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 }
                 for msg in messages
             ]
-        print(messages)
         return messages
+
+    @database_sync_to_async
+    def delete_message_in_db(self, message_id):
+        message = Message.objects.get(chat_id=self.room_name,
+                                      id=message_id,
+                                      creator_id=self.user)
+        message.delete()
 
 
 
