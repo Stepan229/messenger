@@ -4,11 +4,11 @@ from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
 urlpatterns = [
-    path('api/', include('users.urls')),
+    path('', include('users.urls')),
 
     # path('api/', include('rest_framework.urls')),
 
-    path('api/', include('messanger.urls')),
+    path('', include('messanger.urls')),
     # Генерация OpenAPI схемы
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     # Swagger UI

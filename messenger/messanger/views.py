@@ -76,7 +76,8 @@ class ChatsViewSet(viewsets.GenericViewSet):
         'list': serializers.UserChatSerializer,
         'create': serializers.ChatCreateSerializer,
         'update': serializers.ChatSerializer,
-        'get_chat_members': UserSerializer
+        'get_chat_members': UserSerializer,
+        'get_chat_info': serializers.ChatSerializer,
     }
     pagination_class = PageNumberPagination
 
@@ -86,6 +87,15 @@ class ChatsViewSet(viewsets.GenericViewSet):
         chats = UserChat.objects.filter(user_id=user).select_related("chat_id")
         serializer = self.get_serializer(chats, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+    @action(methods=['GET', ], detail=False)
+    def get_chat_info(self, request, *args, **kwargs):
+        user = request.user
+        chat_id = str_to_int(self.kwargs.get('room_id'))
+        chat = verification_user_in_chat(user, chat_id)
+        serializer = self.get_serializer(chat)
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
+
 
     @action(methods=['POST', ], detail=False)
     def create(self, request):
@@ -144,6 +154,9 @@ def index(request):
 
 def room(request, room_id):
     return render(request, 'messanger/room.html', {
-        'room_name': room_id
+        'room_id': room_id
     })
+
+def chats(request):
+    return render(request, 'messanger/chats.html')
 

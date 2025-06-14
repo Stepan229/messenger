@@ -4,8 +4,8 @@ from .views import *
 
 
 urlpatterns = [
-    path("login1/", login1, name="login"),
-    path('register/', AuthViewSet.as_view({'post': 'register'}), name='user-register'),
-    path('login/', AuthViewSet.as_view({'post': 'login'}), name='user-login'),
-    path('logout/', AuthViewSet.as_view({'post': 'logout'}), name='user-logout'),
+    path("login/", login1, name="login"),
+    path('api/register/', AuthViewSet.as_view({'post': 'register'}), name='user-register'),
+    path('api/login/', AuthViewSet.as_view({'post': 'login'}), name='user-login'),
+    path('api/logout/', AuthViewSet.as_view({'post': 'logout'}), name='user-logout'),
 ]

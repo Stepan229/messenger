@@ -1,7 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Комната {{ room_name }}</title>
+    <title>Комната {{ roomName }}</title>
+    <style>
+        #room-title {
+            margin-bottom: 15px;
+            font-size: 1.5em;
+            color: #333;
+        }
+    </style>
     <style>
         #chat-log {
             height: 300px;
@@ -41,18 +48,18 @@
     </style>
 </head>
 <body>
-    <h2>Комната: {{ room_name }}</h2>
+    <div id="room-title">Загрузка названия чата...</div>
     <div id="chat-log"></div>
     <input placeholder="Введите сообщение..." id="chat-message-input" type="text" size="100">
     <button id="chat-message-submit">Отправить</button>
 
     <script>
-        const roomName = "{{ room_name }}";
+        const roomId = "{{ room_id }}";
         const token = localStorage.getItem('token');
-
+        let roomName = "room";
         // Устанавливаем WebSocket соединение
         const chatSocket = new WebSocket(
-            'ws://' + window.location.host + '/ws/chat/' + roomName + '/',
+            'ws://' + window.location.host + '/ws/chat/' + roomId + '/',
             ['Token', token]
         );
 
@@ -76,7 +83,7 @@
 
                     chatLog.scrollTop = chatLog.scrollHeight;
                 }
-                else if (data.type === 'message') {
+                else if (data.type === 'new_message') {
                     // Добавляем новое сообщение
                     displayMessage({
                         id: data.id,
@@ -126,6 +133,36 @@
             document.querySelector('#chat-log').appendChild(messageDiv);
         }
 
+        async function getChatName(roomId) {
+            try {
+                const responseRoom = await fetch('http://127.0.0.1:8000/api/chats/' + roomId + '/', {
+                    headers: {
+                        'Authorization': `Token ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!responseRoom.ok) {
+                    throw new Error('Ошибка при получении названия чата');
+                }
+
+                const dataRoom = await responseRoom.json();
+                return dataRoom.title;
+            } catch (error) {
+                console.error('Ошибка:', error);
+                return "Чат #" + roomId; // Возвращаем fallback название
+            }
+        }
+
+        async function updateRoomTitle() {
+            const titleElement = document.getElementById('room-title');
+            roomName = await getChatName(roomId);
+            titleElement.textContent = `Комната: ${roomName}`;
+            console.log("roomName", roomName)
+            // Также обновляем title страницы
+            document.title = `${roomName} | Чат`;
+        }
+
         // Функция обновления сообщения
         function updateMessage(data) {
             const messageElement = document.querySelector(`#message-${data.id} .message-text`);
@@ -164,9 +201,9 @@
             if (!message) return;
 
             chatSocket.send(JSON.stringify({
-                'type': 'chat_message',
+                'type': 'new_message',
                 'message': message,
-                'room': roomName
+                'room': roomId
             }));
 
             messageInput.value = '';
@@ -189,7 +226,7 @@
                 'type': 'edit_message',
                 'message_id': messageId,
                 'new_text': newText,
-                'room': roomName
+                'room': roomId
             }));
         }
 
@@ -200,8 +237,22 @@
             chatSocket.send(JSON.stringify({
                 'type': 'delete_message',
                 'message_id': messageId,
-                'room': roomName
+                'room': roomId
             }));
+        }
+
+                // Основная функция инициализации
+        async function init() {
+            // Ждем полной загрузки DOM
+            await new Promise(resolve => {
+                if (document.readyState === 'complete') {
+                    resolve();
+                } else {
+                    window.addEventListener('load', resolve);
+                }
+            });
+
+            await updateRoomTitle();
         }
 
         // Обработчики событий WebSocket
@@ -210,7 +261,7 @@
             // Запрашиваем историю сообщений при подключении
             chatSocket.send(JSON.stringify({
                 'type': 'get_history',
-                'room': roomName
+                'room': roomId
             }));
         };
 
@@ -226,14 +277,21 @@
         document.querySelector('#chat-message-submit').onclick = sendMessage;
 
         document.querySelector('#chat-message-input').addEventListener('keypress', function(e) {
+
             if (e.key === 'Enter') {
                 sendMessage();
             }
         });
 
+
         // Добавляем функции в глобальную область видимости
         window.editMessage = editMessage;
         window.deleteMessage = deleteMessage;
+
+        // Запускаем инициализацию
+        init().catch(error => {
+            console.error('Ошибка инициализации:', error);
+        });
     </script>
 </body>
 </html>

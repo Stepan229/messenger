@@ -9,11 +9,6 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 class MessagesSerializer(serializers.ModelSerializer):
-    # creator_id = serializers.PrimaryKeyRelatedField(read_only=True)
-    # chat_id = serializers.PrimaryKeyRelatedField(read_only=True)
-    # text = serializers.CharField(max_length=1000)
-    # time_create = serializers.DateTimeField(read_only=True)
-    # is_read = serializers.BooleanField()
     class Meta:
         model = Message
         fields = '__all__'
