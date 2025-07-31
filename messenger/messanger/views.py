@@ -92,6 +92,7 @@ class ChatsViewSet(viewsets.GenericViewSet):
     def get_chat_info(self, request, *args, **kwargs):
         user = request.user
         chat_id = str_to_int(self.kwargs.get('room_id'))
+        print(user, chat_id)
         chat = verification_user_in_chat(user, chat_id)
         serializer = self.get_serializer(chat)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
