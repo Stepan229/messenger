@@ -87,8 +87,8 @@
 
                 // Проверяем статус ответа
                 if (response.ok) {
-                    {#const data = await response.json();  // Используем await для получения данных#}
-                    {#await localStorage.setItem('token', data.auth_token) // write#}
+                    const data = await response.json();  // Используем await для получения данных
+                    await localStorage.setItem('token', data.auth_token) // write
                     {#const token = localStorage.getItem('token') // read#}
                     {#console.log('Login successful:', token);#}
                     {#console.log(typeof token);#}

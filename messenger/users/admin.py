@@ -3,7 +3,7 @@ from .models import User
 
 class UserAdmin(admin.ModelAdmin):
     # Какие поля отображаются в списке записей
-    list_display = ('id', 'username', 'email', 'is_staff')
+    list_display = ('id', 'username', 'email', 'is_staff', 'is_active', 'is_verified')
 
     # Фильтры справа
     list_filter = ('id', 'username', 'email')

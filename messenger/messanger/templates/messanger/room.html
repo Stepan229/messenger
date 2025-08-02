@@ -8,23 +8,43 @@
             font-size: 1.5em;
             color: #333;
         }
-    </style>
-    <style>
         #chat-log {
             height: 300px;
             overflow-y: scroll;
             border: 1px solid #ccc;
             padding: 10px;
             margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
         }
         .message {
-            margin-bottom: 5px;
-            padding: 5px;
-            border-radius: 5px;
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 15px;
+            max-width: 70%;
             position: relative;
+            word-wrap: break-word;
         }
-        .message:hover {
-            background-color: #f5f5f5;
+        /* Ваши сообщения - справа */
+        .my-message {
+            background-color: #dcf8c6;
+            align-self: flex-end;
+            margin-right: 5px;
+            border-bottom-right-radius: 0;
+        }
+        /* Чужие сообщения - слева */
+        .other-message {
+            background-color: #f1f0f0;
+            align-self: flex-start;
+            margin-left: 5px;
+            border-bottom-left-radius: 0;
+        }
+        .message-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8em;
+            margin-top: 3px;
+            color: #666;
         }
         .message-actions {
             display: none;
@@ -38,129 +58,88 @@
             border: none;
             cursor: pointer;
             padding: 2px 5px;
+            color: #666;
         }
         .system-message {
             color: #666;
             font-style: italic;
             text-align: center;
-            margin: 5px 0;
+            margin: 10px 0;
+        }
+        #chat-message-input {
+            padding: 8px;
+            width: 80%;
+        }
+        #chat-message-submit {
+            padding: 8px 15px;
         }
     </style>
 </head>
 <body>
     <div id="room-title">Загрузка названия чата...</div>
     <div id="chat-log"></div>
-    <input placeholder="Введите сообщение..." id="chat-message-input" type="text" size="100">
+    <input placeholder="Введите сообщение..." id="chat-message-input" type="text">
     <button id="chat-message-submit">Отправить</button>
 
     <script>
         const roomId = "{{ room_id }}";
         const token = localStorage.getItem('token');
+        let currentUsername = "";
         let roomName = "room";
+
         // Устанавливаем WebSocket соединение
         const chatSocket = new WebSocket(
             'ws://' + window.location.host + '/ws/chat/' + roomId + '/',
             ['Token', token]
         );
 
-        // Обработчик входящих сообщений
-        chatSocket.onmessage = function(e) {
+        // Получаем имя текущего пользователя
+        async function getCurrentUsername() {
             try {
-                const data = JSON.parse(e.data);
-                const chatLog = document.querySelector('#chat-log');
-
-                if (data.type === 'history') {
-                    chatLog.innerHTML = '';
-
-                    // Сортировка по возрастанию даты (старые сверху)
-                    const sortedMessages = data.messages.sort((a, b) => {
-                        return new Date(a.created_at) - new Date(b.created_at);
-                    });
-
-                    sortedMessages.forEach(msg => {
-                        displayMessage(msg);
-                    });
-
-                    chatLog.scrollTop = chatLog.scrollHeight;
-                }
-                else if (data.type === 'new_message') {
-                    // Добавляем новое сообщение
-                    displayMessage({
-                        id: data.id,
-                        sender: data.sender,
-                        text: data.message,
-                        created_at: data.timestamp || new Date().toISOString()
-                    });
-
-                    // Прокручиваем вниз
-                    chatLog.scrollTop = chatLog.scrollHeight;
-                }
-                else if (data.type === 'system') {
-                    // Системные уведомления
-                    addSystemMessage(data.text);
-                }
-                else if (data.type === 'message_update') {
-                    // Обновление сообщения
-                    updateMessage(data);
-                }
-                else if (data.type === 'delete_message') {
-                    // Удаление сообщения
-                    deleteMessageFromView(data.id);  // Используем data.id вместо data.message_id
-                }
-
-            } catch (error) {
-                console.error('Ошибка обработки сообщения:', error, e.data);
-            }
-        };
-
-        // Функция отображения сообщения с кнопками
-        function displayMessage(message) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message';
-            messageDiv.id = `message-${message.id}`;
-
-            messageDiv.innerHTML = `
-                <strong>${message.sender || 'Аноним'}:</strong>
-                <span class="message-text">${message.text}</span>
-                <small>${formatDate(message.created_at)}</small>
-                <span class="message-actions">
-                    <button onclick="editMessage(${message.id})">✏️</button>
-                    <button onclick="deleteMessage(${message.id})">🗑️</button>
-                </span>
-            `;
-
-            // Добавляем новое сообщение в конец чата
-            document.querySelector('#chat-log').appendChild(messageDiv);
-        }
-
-        async function getChatName(roomId) {
-            try {
-                const responseRoom = await fetch('http://127.0.0.1:8000/api/chats/' + roomId + '/', {
+                const response = await fetch('http://127.0.0.1:8000/api/user/', {
                     headers: {
                         'Authorization': `Token ${token}`,
                         'Content-Type': 'application/json'
                     }
                 });
 
-                if (!responseRoom.ok) {
-                    throw new Error('Ошибка при получении названия чата');
-                }
+                if (!response.ok) throw new Error('Ошибка получения данных пользователя');
 
-                const dataRoom = await responseRoom.json();
-                return dataRoom.title;
+                const data = await response.json();
+                return data.username;
             } catch (error) {
                 console.error('Ошибка:', error);
-                return "Чат #" + roomId; // Возвращаем fallback название
+                return "anonymous";
             }
         }
 
-        async function updateRoomTitle() {
-            const titleElement = document.getElementById('room-title');
-            roomName = await getChatName(roomId);
-            titleElement.textContent = `Комната: ${roomName}`;
-            console.log("roomName", roomName)
-            // Также обновляем title страницы
-            document.title = `${roomName} | Чат`;
+        // Функция отображения сообщения
+        function displayMessage(message) {
+            const chatLog = document.querySelector('#chat-log');
+            const messageDiv = document.createElement('div');
+
+            // Определяем, наше ли это сообщение
+            const isMyMessage = message.sender === currentUsername;
+
+            messageDiv.className = `message ${isMyMessage ? 'my-message' : 'other-message'}`;
+            messageDiv.id = `message-${message.id}`;
+
+            messageDiv.innerHTML = `
+                ${!isMyMessage ? `<strong>${message.sender || 'Аноним'}</strong><br>` : ''}
+                <span class="message-text">${message.text}</span>
+                <div class="message-info">
+                    <span>${formatDate(message.created_at)}</span>
+                    ${isMyMessage ? `
+                    <span class="message-actions">
+                        <button onclick="editMessage(${message.id})">✏️</button>
+                        <button onclick="deleteMessage(${message.id})">🗑️</button>
+                    </span>
+                    ` : ''}
+                </div>
+            `;
+
+            chatLog.appendChild(messageDiv);
+            chatLog.scrollTop = chatLog.scrollHeight;
         }
 
         // Функция обновления сообщения
@@ -209,11 +188,6 @@
             messageInput.value = '';
         }
 
-        function scrollToBottom() {
-            const chatLog = document.querySelector('#chat-log');
-            chatLog.scrollTop = chatLog.scrollHeight;
-        }
-
         // Функция редактирования сообщения
         async function editMessage(messageId) {
             const messageElement = document.querySelector(`#message-${messageId} .message-text`);
@@ -241,24 +215,78 @@
             }));
         }
 
-                // Основная функция инициализации
-        async function init() {
-            // Ждем полной загрузки DOM
-            await new Promise(resolve => {
-                if (document.readyState === 'complete') {
-                    resolve();
-                } else {
-                    window.addEventListener('load', resolve);
-                }
-            });
+        async function getChatName(roomId) {
+            try {
+                const responseRoom = await fetch('http://127.0.0.1:8000/api/chats/' + roomId + '/', {
+                    headers: {
+                        'Authorization': `Token ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
 
-            await updateRoomTitle();
+                if (!responseRoom.ok) {
+                    throw new Error('Ошибка при получении названия чата');
+                }
+
+                const dataRoom = await responseRoom.json();
+                return dataRoom.title;
+            } catch (error) {
+                console.error('Ошибка:', error);
+                return "Чат #" + roomId;
+            }
+        }
+
+        async function updateRoomTitle() {
+            const titleElement = document.getElementById('room-title');
+            roomName = await getChatName(roomId);
+            titleElement.textContent = `Комната: ${roomName}`;
+            document.title = `${roomName} | Чат`;
         }
 
         // Обработчики событий WebSocket
+        chatSocket.onmessage = function(e) {
+            try {
+                const data = JSON.parse(e.data);
+                const chatLog = document.querySelector('#chat-log');
+
+                if (data.type === 'history') {
+                    chatLog.innerHTML = '';
+
+                    const sortedMessages = data.messages.sort((a, b) => {
+                        return new Date(a.created_at) - new Date(b.created_at);
+                    });
+
+                    sortedMessages.forEach(msg => {
+                        displayMessage(msg);
+                    });
+
+                    chatLog.scrollTop = chatLog.scrollHeight;
+                }
+                else if (data.type === 'new_message') {
+                    displayMessage({
+                        id: data.id,
+                        sender: data.sender,
+                        text: data.message,
+                        created_at: data.timestamp || new Date().toISOString()
+                    });
+                }
+                else if (data.type === 'system') {
+                    addSystemMessage(data.text);
+                }
+                else if (data.type === 'message_update') {
+                    updateMessage(data);
+                }
+                else if (data.type === 'delete_message') {
+                    deleteMessageFromView(data.id);
+                }
+
+            } catch (error) {
+                console.error('Ошибка обработки сообщения:', error, e.data);
+            }
+        };
+
         chatSocket.onopen = function(e) {
             console.log('WebSocket connection established');
-            // Запрашиваем историю сообщений при подключении
             chatSocket.send(JSON.stringify({
                 'type': 'get_history',
                 'room': roomId
@@ -277,16 +305,28 @@
         document.querySelector('#chat-message-submit').onclick = sendMessage;
 
         document.querySelector('#chat-message-input').addEventListener('keypress', function(e) {
-
             if (e.key === 'Enter') {
                 sendMessage();
             }
         });
 
-
         // Добавляем функции в глобальную область видимости
         window.editMessage = editMessage;
         window.deleteMessage = deleteMessage;
+
+        // Основная функция инициализации
+        async function init() {
+            await new Promise(resolve => {
+                if (document.readyState === 'complete') {
+                    resolve();
+                } else {
+                    window.addEventListener('load', resolve);
+                }
+            });
+
+            currentUsername = await getCurrentUsername();
+            await updateRoomTitle();
+        }
 
         // Запускаем инициализацию
         init().catch(error => {

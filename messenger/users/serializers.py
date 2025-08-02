@@ -28,7 +28,6 @@ class UserSerializer(serializers.ModelSerializer):
 class UserLoginSerializer(serializers.Serializer):
     email = serializers.CharField(max_length=254, required=True)
     password = serializers.CharField(max_length=254, required=True, write_only=True)
-    print(email, password)
 
 
 class AuthUserSerializer(serializers.ModelSerializer):
@@ -36,17 +35,19 @@ class AuthUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'first_name', 'last_name', 'is_active', 'is_staff', 'auth_token')
-        read_only_fields = ('id', 'is_active', 'is_staff')
+        fields = ('id', 'email', 'first_name', 'last_name', 'is_verified', 'auth_token')
+        read_only_fields = ('id', 'is_verified', 'auth_token')
 
     def get_auth_token(self, obj):
         token, created = Token.objects.get_or_create(user=obj)
         return token.key
 
 class UserRegisterSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = User
-        fields = ('id', 'email', 'password', 'first_name', 'last_name', 'username')
+        fields = ('id', 'email', 'password', 'first_name', 'last_name',
+                  'username')
 
     def validate_email(self, value):
         user = User.objects.filter(email=value)
@@ -63,5 +64,26 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         if user:
             raise serializers.ValidationError("Username is already taken")
         return value
+
+
+
+class ValidateOptSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)
+
+    def validate(self, data):
+        try:
+            user = User.objects.get(email=data['email'])
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User with this email does not exist.")
+
+        if user.otp != data['otp']:
+            raise serializers.ValidationError({"otp": "Invalid OTP."})
+
+        if user.is_verified:
+            raise serializers.ValidationError({"email": "Email already verified."})
+
+        return data
+
 class EmptySerializer(serializers.Serializer):
     pass
